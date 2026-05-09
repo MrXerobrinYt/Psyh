@@ -66,9 +66,12 @@
                     <div class="chapter-card">
                         <div class="chapter-card-header"><i class="fas fa-file-signature"></i><h3 id="editorTitle">Выберите статью</h3></div>
                         <input type="text" id="chapterTitleInput" class="chapter-title-input" placeholder="Название статьи / номер">
-                        <!-- ПОЛНЫЙ СПИСОК КАТЕГОРИЙ -->
                         <select id="chapterCategoryInput" class="chapter-title-input" style="margin-top:0;border-top:none;">
-                            <option value="УСТАВ">УСТАВ</option>
+                            <option value="Общие положения">Общие положения</option>
+                            <option value="Пациент">Пациент</option>
+                            <option value="Палата особо буйных">Палата особо буйных</option>
+                            <option value="Документация и отчеты">Документация и отчеты</option>
+                            <option value="Дисциплина и субординация">Дисциплина и субординация</option>
                         </select>
                         <textarea id="chapterContentInput" class="chapter-content-editor" placeholder="Полный текст статьи (HTML поддерживается)"></textarea>
                         <div class="chapter-actions">
@@ -102,38 +105,44 @@
         }
 
         function updateRightPanel() {
-            const data = localStorage.getItem('active_visitors');
-            const onlineCountSpan = document.getElementById('onlineCount');
-            const container = document.getElementById('activeUsersListRight');
+            var data = localStorage.getItem('active_visitors');
+            var onlineSpan = document.getElementById('onlineCount');
+            var container = document.getElementById('activeUsersListRight');
             if (!data) {
-                if (onlineCountSpan) onlineCountSpan.innerText = '0';
+                if (onlineSpan) onlineSpan.innerText = '0';
                 if (container) container.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div>';
                 return;
             }
             try {
-                const visitors = JSON.parse(data);
-                const now = Date.now();
-                // Активны те, кто обновлялся последние 40 секунд
-                const active = Object.entries(visitors).filter(([_, v]) => now - v.timestamp < 40000);
-                onlineCountSpan.innerText = active.length;
+                var visitors = JSON.parse(data);
+                var now = Date.now();
+                var active = Object.entries(visitors).filter(function(entry) {
+                    return now - entry[1].timestamp < 40000;
+                });
+                onlineSpan.innerText = active.length;
                 if (active.length === 0) {
                     container.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div>';
                     return;
                 }
-                container.innerHTML = active.map(([id, data]) => `
-                    <div class="user-item">
-                        <div class="user-avatar"><i class="fas fa-user-circle"></i></div>
-                        <div class="user-info">
-                            <div class="user-id">${escapeHtml(id.slice(-8))}</div>
-                            <div class="user-chapter" title="${escapeHtml(data.chapterTitle || 'Глава?')}">${escapeHtml((data.chapterTitle || 'Глава?').length > 30 ? (data.chapterTitle || 'Глава?').slice(0,27)+'...' : (data.chapterTitle || 'Глава?'))}</div>
-                        </div>
-                    </div>
-                `).join('');
+                var html = '';
+                for (var i = 0; i < active.length; i++) {
+                    var id = active[i][0];
+                    var data = active[i][1];
+                    var chapter = data.chapterTitle || 'Глава?';
+                    if (chapter.length > 30) chapter = chapter.slice(0,27) + '...';
+                    html += '<div class="user-item">' +
+                        '<div class="user-avatar"><i class="fas fa-user-circle"></i></div>' +
+                        '<div class="user-info">' +
+                            '<div class="user-id">' + escapeHtml(id.slice(-8)) + '</div>' +
+                            '<div class="user-chapter" title="' + escapeHtml(data.chapterTitle || 'Глава?') + '">' + escapeHtml(chapter) + '</div>' +
+                        '</div>' +
+                    '</div>';
+                }
+                container.innerHTML = html;
             } catch(e) { console.warn(e); }
         }
 
-        // Обновляем каждые 2 секунды (вместо 3)
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', function() {
             updateRightPanel();
             setInterval(updateRightPanel, 2000);
         });
