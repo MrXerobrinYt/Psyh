@@ -1,6 +1,5 @@
-// Глобальный трекер Firebase (без type="module")
 (function() {
-    // Ваш firebaseConfig
+    // Ваш конфиг Firebase (уже готов)
     const firebaseConfig = {
         apiKey: "AIzaSyB6sLxlDP40r3H5i6zTFFvf_AzX6IVU4H8",
         authDomain: "rpm-psihiatrie-north.firebaseapp.com",
@@ -8,29 +7,31 @@
         projectId: "rpm-psihiatrie-north",
         storageBucket: "rpm-psihiatrie-north.firebasestorage.app",
         messagingSenderId: "563535287717",
-        appId: "1:563535287717:web:839c60f821591f12b6444c",
-        measurementId: "G-67B8DK5RPR"
+        appId: "1:563535287717:web:839c60f821591f12b6444c"
     };
 
-    // Инициализация Firebase (глобальная, если скрипт уже загружен)
-    if (!window.firebase) {
-        console.error('Firebase SDK не загружен! Убедитесь, что подключен script из CDN.');
+    // Проверяем, что Firebase SDK загружен
+    if (typeof firebase === 'undefined') {
+        console.error('Firebase SDK не загружен! Подключите скрипты из CDN.');
         return;
     }
-    const app = window.firebase.initializeApp(firebaseConfig);
-    const database = window.firebase.database();
 
-    // Генерируем уникальный идентификатор сессии (sessionStorage)
+    // Инициализация (если ещё не инициализирована)
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const database = firebase.database();
+
+    // Уникальный ID сессии (sessionStorage – разная вкладка = разный пользователь)
     const SESSION_KEY = 'firebase_session_id';
     let sessionId = sessionStorage.getItem(SESSION_KEY);
     if (!sessionId) {
-        sessionId = 'sid_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+        sessionId = 'sid_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
         sessionStorage.setItem(SESSION_KEY, sessionId);
     }
 
     let currentChapterId = null;
     let currentChapterTitle = '';
-
     const userRef = database.ref(`active_users/${sessionId}`);
 
     // При закрытии вкладки – удаляем запись
@@ -46,8 +47,8 @@
             timestamp: Date.now()
         };
         userRef.set(data);
-        // При разрыве соединения удалить запись
         userRef.onDisconnect().remove();
+        console.log('Активность отправлена:', data);
     }
 
     window.setVisitorActivity = function(chapterId, chapterTitle) {
@@ -56,10 +57,12 @@
         updateActivity();
     };
 
+    // Регулярное обновление (каждые 15 секунд)
     setInterval(() => {
         if (currentChapterId !== null) updateActivity();
     }, 15000);
 
+    // Определяем активную главу при загрузке
     function initTracking() {
         const activeItem = document.querySelector('.chapter-list li.active');
         if (activeItem && activeItem.dataset.id) {
@@ -67,7 +70,7 @@
             window.setVisitorActivity(parseInt(activeItem.dataset.id), title);
         } else {
             currentChapterId = 0;
-            currentChapterTitle = 'Загрузка...';
+            currentChapterTitle = 'Первая глава';
             updateActivity();
         }
     }
