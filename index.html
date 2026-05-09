@@ -14,17 +14,30 @@
     <div id="particles-js" class="particles-bg"></div>
     <div class="gradient-overlay"></div>
 
-    <!-- Форма ввода ника (показывается, пока ник не введён) -->
+    <!-- Красивый оверлей ввода ника -->
     <div id="nickOverlay" class="login-overlay" style="display: flex;">
         <div class="login-card">
-            <div class="login-header"><i class="fas fa-user-astronaut"></i><span>Устав психиатрической службы</span></div>
+            <div class="login-header">
+                <i class="fas fa-brain"></i>
+                <span>Устав психиатрической службы</span>
+                <div class="header-badge">North</div>
+            </div>
             <div class="login-body">
                 <h2>Представьтесь</h2>
-                <p>Введите ваш ник (будет отображаться администраторам)</p>
-                <div class="input-group"><i class="fas fa-id-badge"></i><input type="text" id="readerNick" placeholder="Ваш ник" autocomplete="off"></div>
-                <button id="enterBtn" class="login-btn">Войти как читатель <i class="fas fa-arrow-right"></i></button>
+                <p>Введите ваш ник – он будет виден администраторам</p>
+                <div class="input-group">
+                    <i class="fas fa-id-badge"></i>
+                    <input type="text" id="readerNick" placeholder="Ваш ник / позывной" autocomplete="off">
+                </div>
+                <button id="enterBtn" class="login-btn">
+                    <span>Войти как читатель</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
             </div>
-            <div class="login-footer"><i class="fas fa-shield-alt"></i> Ваш ник будет виден администраторам</div>
+            <div class="login-footer">
+                <i class="fas fa-shield-alt"></i>
+                <span>Конфиденциальность: ник не передаётся третьим лицам</span>
+            </div>
         </div>
     </div>
 
@@ -69,9 +82,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-    <!-- Трекер читателей -->
     <script src="js/reader-tracker.js"></script>
-    <!-- Остальные скрипты -->
     <script src="js/particles-config.js"></script>
     <script src="js/common.js"></script>
     <script src="js/script.js"></script>
@@ -84,26 +95,36 @@
         function startSession() {
             const nick = nickInput.value.trim();
             if (!nick) {
-                alert('Введите ник');
+                // Визуальная подсказка об ошибке
+                nickInput.style.borderColor = '#ef4444';
+                setTimeout(() => nickInput.style.borderColor = '', 1500);
                 return;
             }
             localStorage.setItem('reader_nick', nick);
             if (window.setReaderNick && typeof window.setReaderNick === 'function') {
                 window.setReaderNick(nick);
             }
-            nickOverlay.style.display = 'none';
-            mainContent.style.display = 'flex';
-            if (typeof loadChapters === 'function') loadChapters();
+            // Плавное исчезновение оверлея
+            nickOverlay.style.opacity = '0';
+            setTimeout(() => {
+                nickOverlay.style.display = 'none';
+                mainContent.style.display = 'flex';
+                if (typeof loadChapters === 'function') loadChapters();
+            }, 300);
         }
 
         const savedNick = localStorage.getItem('reader_nick');
         if (savedNick) {
             nickInput.value = savedNick;
             startSession();
+        } else {
+            // Плавное появление оверлея
+            nickOverlay.style.opacity = '1';
         }
 
         enterBtn.addEventListener('click', startSession);
         nickInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') startSession(); });
+        nickInput.addEventListener('input', () => nickInput.style.borderColor = '');
     </script>
 </body>
 </html>
