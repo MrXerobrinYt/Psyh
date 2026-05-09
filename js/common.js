@@ -53,7 +53,6 @@ function renderChapter(id) {
         if (parseInt(li.dataset.id) === id) li.classList.add('active');
         else li.classList.remove('active');
     });
-    // ✅ Отправка активности читателя (ник уже установлен в reader-tracker.js)
     if (typeof window.setReaderActivity === 'function') {
         window.setReaderActivity(id, chapter.title);
     }
