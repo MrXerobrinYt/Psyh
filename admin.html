@@ -148,5 +148,77 @@
         });
         window.addEventListener('visitors-updated', updateRightPanel);
     </script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+    
+        // Те же настройки Firebase (скопируйте из вашего конфига)
+        const firebaseConfig = {
+            apiKey: "AIzaSyB6sLxlDP40r3H5i6zTFFvf_AzX6IVU4H8",
+            authDomain: "rpm-psihiatrie-north.firebaseapp.com",
+            databaseURL: "https://rpm-psihiatrie-north-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "rpm-psihiatrie-north",
+            storageBucket: "rpm-psihiatrie-north.firebasestorage.app",
+            messagingSenderId: "563535287717",
+            appId: "1:563535287717:web:839c60f821591f12b6444c",
+            measurementId: "G-67B8DK5RPR"
+        };
+    
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const activeUsersRef = ref(database, 'active_users');
+    
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+    
+        function updateRightPanel(snapshot) {
+            const onlineCountSpan = document.getElementById('onlineCount');
+            const container = document.getElementById('activeUsersListRight');
+            if (!onlineCountSpan || !container) return;
+    
+            const users = snapshot.val();
+            if (!users) {
+                onlineCountSpan.innerText = '0';
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div>';
+                return;
+            }
+
+            const now = Date.now();
+            // Фильтруем записи, обновлённые не более 40 секунд назад
+            const activeEntries = Object.entries(users).filter(([_, data]) => now - data.timestamp < 40000);
+            onlineCountSpan.innerText = activeEntries.length;
+
+            if (activeEntries.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div>';
+                return;
+            }
+
+            let html = '';
+            for (const [sessionId, data] of activeEntries) {
+                let chapter = data.chapterTitle || 'Глава?';
+                if (chapter.length > 30) chapter = chapter.slice(0, 27) + '...';
+                html += `
+                    <div class="user-item">
+                        <div class="user-avatar"><i class="fas fa-user-circle"></i></div>
+                        <div class="user-info">
+                            <div class="user-id">${escapeHtml(sessionId.slice(-8))}</div>
+                            <div class="user-chapter" title="${escapeHtml(data.chapterTitle || 'Глава?')}">${escapeHtml(chapter)}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+    
+        // Подписываемся на изменения в реальном времени
+        onValue(activeUsersRef, updateRightPanel);
+    </script>
 </body>
 </html>
