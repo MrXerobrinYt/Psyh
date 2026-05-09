@@ -95,7 +95,6 @@
         function startSession() {
             const nick = nickInput.value.trim();
             if (!nick) {
-                // Визуальная подсказка об ошибке
                 nickInput.style.borderColor = '#ef4444';
                 setTimeout(() => nickInput.style.borderColor = '', 1500);
                 return;
@@ -104,7 +103,6 @@
             if (window.setReaderNick && typeof window.setReaderNick === 'function') {
                 window.setReaderNick(nick);
             }
-            // Плавное исчезновение оверлея
             nickOverlay.style.opacity = '0';
             setTimeout(() => {
                 nickOverlay.style.display = 'none';
@@ -118,7 +116,6 @@
             nickInput.value = savedNick;
             startSession();
         } else {
-            // Плавное появление оверлея
             nickOverlay.style.opacity = '1';
         }
 
