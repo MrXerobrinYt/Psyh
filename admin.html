@@ -14,6 +14,7 @@
     <div id="particles-js" class="particles-bg"></div>
     <div class="gradient-overlay"></div>
 
+    <!-- Окно входа -->
     <div id="loginOverlay" class="login-overlay">
         <div class="login-card">
             <div class="login-header"><i class="fas fa-gavel"></i><span>Устав North</span><small>Admin</small></div>
@@ -29,6 +30,7 @@
         </div>
     </div>
 
+    <!-- Админ-панель -->
     <div class="admin-app" id="adminContent" style="display: none;">
         <nav class="admin-nav">
             <div class="nav-brand"><i class="fas fa-gavel"></i> Редактор устава <span class="badge">North</span></div>
@@ -39,6 +41,7 @@
         </nav>
 
         <div class="admin-layout">
+            <!-- Левая панель -->
             <aside class="admin-sidebar">
                 <div class="stats-card">
                     <div class="stats-title"><i class="fas fa-chart-line"></i> Статистика</div>
@@ -53,6 +56,7 @@
                 </div>
             </aside>
 
+            <!-- Центральный редактор -->
             <div class="admin-editor">
                 <div class="editor-header">
                     <h2><i class="fas fa-pen-fancy"></i> Редактор текста устава</h2>
@@ -62,6 +66,7 @@
                     <div class="chapter-card">
                         <div class="chapter-card-header"><i class="fas fa-file-signature"></i><h3 id="editorTitle">Выберите статью</h3></div>
                         <input type="text" id="chapterTitleInput" class="chapter-title-input" placeholder="Название статьи / номер">
+                        <!-- ПОЛНЫЙ СПИСОК КАТЕГОРИЙ -->
                         <select id="chapterCategoryInput" class="chapter-title-input" style="margin-top:0;border-top:none;">
                             <option value="УСТАВ">УСТАВ</option>
                         </select>
@@ -74,6 +79,7 @@
                 </div>
             </div>
 
+            <!-- Правая панель "Online" -->
             <div class="admin-right-panel" id="rightPanel">
                 <div class="right-panel-header"><i class="fas fa-users"></i><span>Online</span><span class="online-count" id="onlineCount">0</span></div>
                 <div class="right-panel-body" id="activeUsersListRight"><div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div></div>
@@ -85,22 +91,33 @@
     <script src="js/common.js"></script>
     <script src="js/admin.js"></script>
     <script>
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
         function updateRightPanel() {
             const data = localStorage.getItem('active_visitors');
             const onlineCountSpan = document.getElementById('onlineCount');
             const container = document.getElementById('activeUsersListRight');
             if (!data) {
-                if(onlineCountSpan) onlineCountSpan.innerText='0';
-                if(container) container.innerHTML='<div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div>';
+                if (onlineCountSpan) onlineCountSpan.innerText = '0';
+                if (container) container.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div>';
                 return;
             }
             try {
                 const visitors = JSON.parse(data);
                 const now = Date.now();
-                const active = Object.entries(visitors).filter(([_,v]) => now - v.timestamp < 15000);
+                // Активны те, кто обновлялся последние 40 секунд
+                const active = Object.entries(visitors).filter(([_, v]) => now - v.timestamp < 40000);
                 onlineCountSpan.innerText = active.length;
                 if (active.length === 0) {
-                    container.innerHTML='<div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div>';
+                    container.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div>';
                     return;
                 }
                 container.innerHTML = active.map(([id, data]) => `
@@ -108,14 +125,18 @@
                         <div class="user-avatar"><i class="fas fa-user-circle"></i></div>
                         <div class="user-info">
                             <div class="user-id">${escapeHtml(id.slice(-8))}</div>
-                            <div class="user-chapter" title="${escapeHtml(data.chapterTitle||'Глава?')}">${escapeHtml((data.chapterTitle||'Глава?').length>30 ? (data.chapterTitle||'Глава?').slice(0,27)+'...' : (data.chapterTitle||'Глава?'))}</div>
+                            <div class="user-chapter" title="${escapeHtml(data.chapterTitle || 'Глава?')}">${escapeHtml((data.chapterTitle || 'Глава?').length > 30 ? (data.chapterTitle || 'Глава?').slice(0,27)+'...' : (data.chapterTitle || 'Глава?'))}</div>
                         </div>
                     </div>
                 `).join('');
             } catch(e) { console.warn(e); }
         }
-        function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
-        document.addEventListener('DOMContentLoaded', () => { updateRightPanel(); setInterval(updateRightPanel,3000); });
+
+        // Обновляем каждые 2 секунды (вместо 3)
+        document.addEventListener('DOMContentLoaded', () => {
+            updateRightPanel();
+            setInterval(updateRightPanel, 2000);
+        });
         window.addEventListener('visitors-updated', updateRightPanel);
     </script>
 </body>
