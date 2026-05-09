@@ -41,7 +41,6 @@
         </nav>
 
         <div class="admin-layout">
-            <!-- Левая панель -->
             <aside class="admin-sidebar">
                 <div class="stats-card">
                     <div class="stats-title"><i class="fas fa-chart-line"></i> Статистика</div>
@@ -56,7 +55,6 @@
                 </div>
             </aside>
 
-            <!-- Центральный редактор -->
             <div class="admin-editor">
                 <div class="editor-header">
                     <h2><i class="fas fa-pen-fancy"></i> Редактор текста устава</h2>
@@ -82,7 +80,6 @@
                 </div>
             </div>
 
-            <!-- Правая панель "Online" -->
             <div class="admin-right-panel" id="rightPanel">
                 <div class="right-panel-header"><i class="fas fa-users"></i><span>Online</span><span class="online-count" id="onlineCount">0</span></div>
                 <div class="right-panel-body" id="activeUsersListRight"><div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div></div>
@@ -90,69 +87,11 @@
         </div>
     </div>
 
-    <script src="js/particles-config.js"></script>
-    <script src="js/common.js"></script>
-    <script src="js/admin.js"></script>
+    <!-- Firebase SDK (совместимая версия – работает без type="module") -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <script>
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str).replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        }
-
-        function updateRightPanel() {
-            var data = localStorage.getItem('active_visitors');
-            var onlineSpan = document.getElementById('onlineCount');
-            var container = document.getElementById('activeUsersListRight');
-            if (!data) {
-                if (onlineSpan) onlineSpan.innerText = '0';
-                if (container) container.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div>';
-                return;
-            }
-            try {
-                var visitors = JSON.parse(data);
-                var now = Date.now();
-                var active = Object.entries(visitors).filter(function(entry) {
-                    return now - entry[1].timestamp < 40000;
-                });
-                onlineSpan.innerText = active.length;
-                if (active.length === 0) {
-                    container.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div>';
-                    return;
-                }
-                var html = '';
-                for (var i = 0; i < active.length; i++) {
-                    var id = active[i][0];
-                    var data = active[i][1];
-                    var chapter = data.chapterTitle || 'Глава?';
-                    if (chapter.length > 30) chapter = chapter.slice(0,27) + '...';
-                    html += '<div class="user-item">' +
-                        '<div class="user-avatar"><i class="fas fa-user-circle"></i></div>' +
-                        '<div class="user-info">' +
-                            '<div class="user-id">' + escapeHtml(id.slice(-8)) + '</div>' +
-                            '<div class="user-chapter" title="' + escapeHtml(data.chapterTitle || 'Глава?') + '">' + escapeHtml(chapter) + '</div>' +
-                        '</div>' +
-                    '</div>';
-                }
-                container.innerHTML = html;
-            } catch(e) { console.warn(e); }
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            updateRightPanel();
-            setInterval(updateRightPanel, 2000);
-        });
-        window.addEventListener('visitors-updated', updateRightPanel);
-    </script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
-    
-        // Те же настройки Firebase (скопируйте из вашего конфига)
+        // ---------- Firebase Config ----------
         const firebaseConfig = {
             apiKey: "AIzaSyB6sLxlDP40r3H5i6zTFFvf_AzX6IVU4H8",
             authDomain: "rpm-psihiatrie-north.firebaseapp.com",
@@ -163,11 +102,12 @@
             appId: "1:563535287717:web:839c60f821591f12b6444c",
             measurementId: "G-67B8DK5RPR"
         };
-    
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
-        const activeUsersRef = ref(database, 'active_users');
-    
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const activeUsersRef = database.ref('active_users');
+
+        // ---------- Экранирование ----------
         function escapeHtml(str) {
             if (!str) return '';
             return String(str).replace(/[&<>]/g, function(m) {
@@ -177,12 +117,13 @@
                 return m;
             });
         }
-    
+
+        // ---------- Обновление правой панели (Firebase) ----------
         function updateRightPanel(snapshot) {
             const onlineCountSpan = document.getElementById('onlineCount');
             const container = document.getElementById('activeUsersListRight');
             if (!onlineCountSpan || !container) return;
-    
+
             const users = snapshot.val();
             if (!users) {
                 onlineCountSpan.innerText = '0';
@@ -191,7 +132,6 @@
             }
 
             const now = Date.now();
-            // Фильтруем записи, обновлённые не более 40 секунд назад
             const activeEntries = Object.entries(users).filter(([_, data]) => now - data.timestamp < 40000);
             onlineCountSpan.innerText = activeEntries.length;
 
@@ -216,9 +156,12 @@
             }
             container.innerHTML = html;
         }
-    
-        // Подписываемся на изменения в реальном времени
-        onValue(activeUsersRef, updateRightPanel);
+
+        // Подписываемся на изменения базы данных
+        activeUsersRef.on('value', updateRightPanel);
     </script>
+
+    <script src="js/common.js"></script>
+    <script src="js/admin.js"></script>
 </body>
 </html>
