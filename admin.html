@@ -178,7 +178,6 @@
         adminsRef.on('value', updateAdminList);
         readersRef.on('value', updateReaderList);
 
-        // Администраторский вход, выход и обновление активности
         async function loadAdmins() {
             try {
                 const res = await fetch('data/admins.json');
