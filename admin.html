@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Устав психиатрической службы | Админ-панель</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+</head>
+<body>
+    <div id="particles-js" class="particles-bg"></div>
+    <div class="gradient-overlay"></div>
+
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-card">
+            <div class="login-header"><i class="fas fa-gavel"></i><span>Устав North</span><small>Admin</small></div>
+            <div class="login-body">
+                <h2>Добро пожаловать</h2>
+                <p>Введите учётные данные уполномоченного лица</p>
+                <div class="input-group"><i class="fas fa-user-tie"></i><input type="text" id="loginUsername" placeholder="Логин"></div>
+                <div class="input-group"><i class="fas fa-lock"></i><input type="password" id="loginPassword" placeholder="Пароль"></div>
+                <button id="loginBtn" class="login-btn">Войти <i class="fas fa-arrow-right"></i></button>
+                <div id="loginError" class="error-msg"></div>
+            </div>
+            <div class="login-footer"><i class="fas fa-shield-alt"></i> Только для администраторов устава</div>
+        </div>
+    </div>
+
+    <div class="admin-app" id="adminContent" style="display: none;">
+        <nav class="admin-nav">
+            <div class="nav-brand"><i class="fas fa-gavel"></i> Редактор устава <span class="badge">North</span></div>
+            <div class="nav-actions">
+                <a href="index.html" class="nav-btn"><i class="fas fa-home"></i> <span>Главная</span></a>
+                <button id="logoutBtn" class="nav-btn logout"><i class="fas fa-sign-out-alt"></i> <span>Выйти</span></button>
+            </div>
+        </nav>
+
+        <div class="admin-layout">
+            <aside class="admin-sidebar">
+                <div class="stats-card">
+                    <div class="stats-title"><i class="fas fa-chart-line"></i> Статистика</div>
+                    <div class="stat-item"><i class="fas fa-file-alt"></i><div><span>Всего статей</span><strong id="totalChapters">0</strong></div></div>
+                    <div class="stat-item"><i class="fas fa-clock"></i><div><span>Последнее обновление</span><strong id="lastEdited">—</strong></div></div>
+                    <div class="stat-item"><i class="fas fa-database"></i><div><span>Хранилище</span><strong id="storageStatus">Локальное</strong></div></div>
+                </div>
+                <button id="addChapterBtn" class="create-btn"><i class="fas fa-plus"></i> Новая статья</button>
+                <div class="sidebar-chapters">
+                    <div class="sidebar-title"><i class="fas fa-list-ul"></i> Список статей</div>
+                    <ul class="chapter-sidebar-list" id="chapterSidebarList"><li>Загрузка...</li></ul>
+                </div>
+            </aside>
+
+            <div class="admin-editor">
+                <div class="editor-header">
+                    <h2><i class="fas fa-pen-fancy"></i> Редактор текста устава</h2>
+                    <p class="hint">HTML-теги: h1, p, strong, ul, li – для форматирования статей</p>
+                </div>
+                <div class="single-editor" id="singleEditor">
+                    <div class="chapter-card">
+                        <div class="chapter-card-header"><i class="fas fa-file-signature"></i><h3 id="editorTitle">Выберите статью</h3></div>
+                        <input type="text" id="chapterTitleInput" class="chapter-title-input" placeholder="Название статьи / номер">
+                        <select id="chapterCategoryInput" class="chapter-title-input" style="margin-top:0;border-top:none;">
+                            <option value="Общие положения">Общие положения</option>
+                            <option value="Права и обязанности">Права и обязанности</option>
+                            <option value="Дисциплина">Дисциплина</option>
+                            <option value="Медицинская этика">Медицинская этика</option>
+                            <option value="Заключительные положения">Заключительные положения</option>
+                        </select>
+                        <textarea id="chapterContentInput" class="chapter-content-editor" placeholder="Полный текст статьи (HTML поддерживается)"></textarea>
+                        <div class="chapter-actions">
+                            <button id="saveCurrentBtn" class="save-btn"><i class="fas fa-save"></i> Сохранить статью</button>
+                            <button id="deleteCurrentBtn" class="delete-btn"><i class="fas fa-trash"></i> Удалить статью</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-right-panel" id="rightPanel">
+                <div class="right-panel-header"><i class="fas fa-users"></i><span>Online</span><span class="online-count" id="onlineCount">0</span></div>
+                <div class="right-panel-body" id="activeUsersListRight"><div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/particles-config.js"></script>
+    <script src="js/common.js"></script>
+    <script src="js/admin.js"></script>
+    <script>
+        function updateRightPanel() {
+            const data = localStorage.getItem('active_visitors');
+            const onlineCountSpan = document.getElementById('onlineCount');
+            const container = document.getElementById('activeUsersListRight');
+            if (!data) {
+                if(onlineCountSpan) onlineCountSpan.innerText='0';
+                if(container) container.innerHTML='<div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div>';
+                return;
+            }
+            try {
+                const visitors = JSON.parse(data);
+                const now = Date.now();
+                const active = Object.entries(visitors).filter(([_,v]) => now - v.timestamp < 15000);
+                onlineCountSpan.innerText = active.length;
+                if (active.length === 0) {
+                    container.innerHTML='<div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div>';
+                    return;
+                }
+                container.innerHTML = active.map(([id, data]) => `
+                    <div class="user-item">
+                        <div class="user-avatar"><i class="fas fa-user-circle"></i></div>
+                        <div class="user-info">
+                            <div class="user-id">${escapeHtml(id.slice(-8))}</div>
+                            <div class="user-chapter" title="${escapeHtml(data.chapterTitle||'Глава?')}">${escapeHtml((data.chapterTitle||'Глава?').length>30 ? (data.chapterTitle||'Глава?').slice(0,27)+'...' : (data.chapterTitle||'Глава?'))}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch(e) { console.warn(e); }
+        }
+        function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
+        document.addEventListener('DOMContentLoaded', () => { updateRightPanel(); setInterval(updateRightPanel,3000); });
+        window.addEventListener('visitors-updated', updateRightPanel);
+    </script>
+</body>
+</html>
