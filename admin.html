@@ -14,15 +14,16 @@
     <div id="particles-js" class="particles-bg"></div>
     <div class="gradient-overlay"></div>
 
-    <!-- Окно входа -->
+    <!-- Окно входа администратора -->
     <div id="loginOverlay" class="login-overlay">
         <div class="login-card">
             <div class="login-header"><i class="fas fa-gavel"></i><span>Устав North</span><small>Admin</small></div>
             <div class="login-body">
                 <h2>Добро пожаловать</h2>
-                <p>Введите учётные данные уполномоченного лица</p>
-                <div class="input-group"><i class="fas fa-user-tie"></i><input type="text" id="loginUsername" placeholder="Логин"></div>
-                <div class="input-group"><i class="fas fa-lock"></i><input type="password" id="loginPassword" placeholder="Пароль"></div>
+                <p>Введите учётные данные и ваш ник</p>
+                <div class="input-group"><i class="fas fa-user-tie"></i><input type="text" id="loginUsername" placeholder="Логин" autocomplete="off"></div>
+                <div class="input-group"><i class="fas fa-lock"></i><input type="password" id="loginPassword" placeholder="Пароль" autocomplete="off"></div>
+                <div class="input-group"><i class="fas fa-id-badge"></i><input type="text" id="loginNick" placeholder="Ваш ник (будет виден другим)" autocomplete="off"></div>
                 <button id="loginBtn" class="login-btn">Войти <i class="fas fa-arrow-right"></i></button>
                 <div id="loginError" class="error-msg"></div>
             </div>
@@ -80,18 +81,20 @@
                 </div>
             </div>
 
+            <!-- Правая панель: Администраторы и Читатели онлайн -->
             <div class="admin-right-panel" id="rightPanel">
-                <div class="right-panel-header"><i class="fas fa-users"></i><span>Online</span><span class="online-count" id="onlineCount">0</span></div>
-                <div class="right-panel-body" id="activeUsersListRight"><div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div></div>
+                <div class="right-panel-header"><i class="fas fa-user-shield"></i><span>Администраторы</span><span class="online-count" id="adminCount">0</span></div>
+                <div class="right-panel-body" id="adminList"><div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div></div>
+                <div class="right-panel-header" style="margin-top: 16px;"><i class="fas fa-users"></i><span>Читатели</span><span class="online-count" id="readerCount">0</span></div>
+                <div class="right-panel-body" id="readerList"><div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div></div>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK (совместимая версия – работает без type="module") -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <script>
-        // ---------- Firebase Config ----------
         const firebaseConfig = {
             apiKey: "AIzaSyB6sLxlDP40r3H5i6zTFFvf_AzX6IVU4H8",
             authDomain: "rpm-psihiatrie-north.firebaseapp.com",
@@ -99,18 +102,20 @@
             projectId: "rpm-psihiatrie-north",
             storageBucket: "rpm-psihiatrie-north.firebasestorage.app",
             messagingSenderId: "563535287717",
-            appId: "1:563535287717:web:839c60f821591f12b6444c",
-            measurementId: "G-67B8DK5RPR"
+            appId: "1:563535287717:web:839c60f821591f12b6444c"
         };
-
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-        const activeUsersRef = database.ref('active_users');
 
-        // ---------- Экранирование ----------
+        const adminsRef = database.ref('active_admins');
+        const readersRef = database.ref('active_readers');
+
+        let currentAdminNick = null;
+        let myAdminRef = null;
+
         function escapeHtml(str) {
             if (!str) return '';
-            return String(str).replace(/[&<>]/g, function(m) {
+            return String(str).replace(/[&<>]/g, m => {
                 if (m === '&') return '&amp;';
                 if (m === '<') return '&lt;';
                 if (m === '>') return '&gt;';
@@ -118,47 +123,171 @@
             });
         }
 
-        // ---------- Обновление правой панели (Firebase) ----------
-        function updateRightPanel(snapshot) {
-            const onlineCountSpan = document.getElementById('onlineCount');
-            const container = document.getElementById('activeUsersListRight');
-            if (!onlineCountSpan || !container) return;
-
+        function updateAdminList(snapshot) {
+            const countSpan = document.getElementById('adminCount');
+            const container = document.getElementById('adminList');
+            if (!countSpan || !container) return;
             const users = snapshot.val();
             if (!users) {
-                onlineCountSpan.innerText = '0';
+                countSpan.innerText = '0';
                 container.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div>';
                 return;
             }
-
             const now = Date.now();
-            const activeEntries = Object.entries(users).filter(([_, data]) => now - data.timestamp < 40000);
-            onlineCountSpan.innerText = activeEntries.length;
-
-            if (activeEntries.length === 0) {
+            const active = Object.entries(users).filter(([_, d]) => now - d.timestamp < 40000);
+            countSpan.innerText = active.length;
+            if (active.length === 0) {
                 container.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div>';
                 return;
             }
-
             let html = '';
-            for (const [sessionId, data] of activeEntries) {
+            for (const [nick, data] of active) {
                 let chapter = data.chapterTitle || 'Глава?';
-                if (chapter.length > 30) chapter = chapter.slice(0, 27) + '...';
-                html += `
-                    <div class="user-item">
-                        <div class="user-avatar"><i class="fas fa-user-circle"></i></div>
-                        <div class="user-info">
-                            <div class="user-id">${escapeHtml(sessionId.slice(-8))}</div>
-                            <div class="user-chapter" title="${escapeHtml(data.chapterTitle || 'Глава?')}">${escapeHtml(chapter)}</div>
-                        </div>
-                    </div>
-                `;
+                if (chapter.length > 30) chapter = chapter.slice(0,27)+'...';
+                html += `<div class="user-item"><div class="user-avatar"><i class="fas fa-user-circle"></i></div><div class="user-info"><div class="user-id">${escapeHtml(nick)}</div><div class="user-chapter">${escapeHtml(chapter)}</div></div></div>`;
             }
             container.innerHTML = html;
         }
 
-        // Подписываемся на изменения базы данных
-        activeUsersRef.on('value', updateRightPanel);
+        function updateReaderList(snapshot) {
+            const countSpan = document.getElementById('readerCount');
+            const container = document.getElementById('readerList');
+            if (!countSpan || !container) return;
+            const users = snapshot.val();
+            if (!users) {
+                countSpan.innerText = '0';
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div>';
+                return;
+            }
+            const now = Date.now();
+            const active = Object.entries(users).filter(([_, d]) => now - d.timestamp < 40000);
+            countSpan.innerText = active.length;
+            if (active.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><span>Нет активных</span></div>';
+                return;
+            }
+            let html = '';
+            for (const [nick, data] of active) {
+                let chapter = data.chapterTitle || 'Глава?';
+                if (chapter.length > 30) chapter = chapter.slice(0,27)+'...';
+                html += `<div class="user-item"><div class="user-avatar"><i class="fas fa-user-circle"></i></div><div class="user-info"><div class="user-id">${escapeHtml(nick)}</div><div class="user-chapter">${escapeHtml(chapter)}</div></div></div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        adminsRef.on('value', updateAdminList);
+        readersRef.on('value', updateReaderList);
+
+        // Администраторский вход, выход и обновление активности
+        async function loadAdmins() {
+            try {
+                const res = await fetch('data/admins.json');
+                if (res.ok) return await res.json();
+                else return [{ username: 'MaGdI', password: 'BlackWell1' }];
+            } catch(e) { return [{ username: 'MaGdI', password: 'BlackWell1' }]; }
+        }
+
+        function updateAdminActivity(chapterId, chapterTitle) {
+            if (!currentAdminNick || !myAdminRef) return;
+            myAdminRef.set({
+                chapterId: chapterId || 0,
+                chapterTitle: chapterTitle || 'Панель',
+                timestamp: Date.now()
+            });
+            myAdminRef.onDisconnect().remove();
+        }
+
+        async function login() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            const nick = document.getElementById('loginNick').value.trim();
+            const errorDiv = document.getElementById('loginError');
+            if (!username || !password || !nick) {
+                errorDiv.innerText = 'Заполните все поля';
+                errorDiv.classList.add('show');
+                return;
+            }
+            const adminsList = await loadAdmins();
+            const valid = adminsList.find(a => a.username === username && a.password === password);
+            if (!valid) {
+                errorDiv.innerText = 'Неверный логин или пароль';
+                errorDiv.classList.add('show');
+                return;
+            }
+            currentAdminNick = nick;
+            myAdminRef = database.ref(`active_admins/${nick}`);
+            updateAdminActivity(0, 'Вход в панель');
+
+            window.addEventListener('beforeunload', () => { if (myAdminRef) myAdminRef.remove(); });
+            localStorage.setItem('adminLoggedIn', 'true');
+            localStorage.setItem('adminNick', nick);
+
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('adminContent').style.display = 'block';
+            errorDiv.classList.remove('show');
+
+            if (typeof loadData === 'function') loadData();
+            setTimeout(() => {
+                if (typeof bindEditorTracking === 'function') bindEditorTracking();
+                else console.warn('bindEditorTracking не определена');
+            }, 500);
+        }
+
+        function logout() {
+            if (myAdminRef) myAdminRef.remove();
+            localStorage.removeItem('adminLoggedIn');
+            localStorage.removeItem('adminNick');
+            currentAdminNick = null;
+            document.getElementById('loginOverlay').style.display = 'flex';
+            document.getElementById('adminContent').style.display = 'none';
+        }
+
+        function checkAuth() {
+            const logged = localStorage.getItem('adminLoggedIn') === 'true';
+            const savedNick = localStorage.getItem('adminNick');
+            if (logged && savedNick) {
+                currentAdminNick = savedNick;
+                myAdminRef = database.ref(`active_admins/${savedNick}`);
+                updateAdminActivity(0, 'Восстановлен вход');
+                window.addEventListener('beforeunload', () => { if (myAdminRef) myAdminRef.remove(); });
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+                if (typeof loadData === 'function') loadData();
+            } else {
+                document.getElementById('loginOverlay').style.display = 'flex';
+                document.getElementById('adminContent').style.display = 'none';
+            }
+        }
+
+        function bindEditorTracking() {
+            if (typeof selectChapter === 'function') {
+                const originalSelect = window.selectChapter;
+                window.selectChapter = function(id) {
+                    originalSelect(id);
+                    const chapter = editingChapters.find(c => c.id === id);
+                    if (chapter) updateAdminActivity(id, chapter.title);
+                };
+            }
+            if (typeof saveCurrent === 'function') {
+                const originalSave = window.saveCurrent;
+                window.saveCurrent = function() {
+                    originalSave();
+                    if (selectedChapterId) {
+                        const chapter = editingChapters.find(c => c.id === selectedChapterId);
+                        if (chapter) updateAdminActivity(selectedChapterId, chapter.title);
+                    }
+                };
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('loginBtn')?.addEventListener('click', login);
+            document.getElementById('logoutBtn')?.addEventListener('click', logout);
+            document.getElementById('loginPassword')?.addEventListener('keypress', e => e.key === 'Enter' && login());
+            document.getElementById('loginUsername')?.addEventListener('keypress', e => e.key === 'Enter' && login());
+            document.getElementById('loginNick')?.addEventListener('keypress', e => e.key === 'Enter' && login());
+            checkAuth();
+        });
     </script>
 
     <script src="js/common.js"></script>
