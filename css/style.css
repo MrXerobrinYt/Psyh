@@ -166,6 +166,50 @@
 .reader-body p {
     margin-bottom: 1.2rem;
 }
+/* Дополнительные стили для оверлея входа читателя – в стиле админ-панели */
+.login-header {
+    position: relative;
+}
+.header-badge {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(124,58,237,0.3);
+    padding: 4px 12px;
+    border-radius: 40px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #c4b5fd;
+    backdrop-filter: blur(4px);
+}
+.login-body .input-group input {
+    font-size: 16px;
+    transition: all 0.2s;
+}
+.login-body .input-group input:focus {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.2);
+}
+.login-btn {
+    position: relative;
+    overflow: hidden;
+}
+.login-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+}
+.login-btn:active::after {
+    width: 200px;
+    height: 200px;
+}
 .skeleton {
     animation: pulse 1.5s infinite;
 }
