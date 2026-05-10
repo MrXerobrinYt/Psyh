@@ -8,14 +8,8 @@
         messagingSenderId: "563535287717",
         appId: "1:563535287717:web:839c60f821591f12b6444c"
     };
-
-    if (typeof firebase === 'undefined') {
-        console.error('Firebase SDK не загружен!');
-        return;
-    }
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
+    if (typeof firebase === 'undefined') return;
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
     let currentNick = null;
@@ -23,7 +17,6 @@
     let currentChapterTitle = '';
     let userRef = null;
 
-    // Принудительное обновление текущей главы (вызывается из common.js)
     window.updateCurrentChapter = function() {
         const activeItem = document.querySelector('.chapter-list li.active');
         let id = null, title = '';
@@ -49,9 +42,7 @@
         if (currentNick === nick) return;
         currentNick = nick;
         userRef = database.ref(`active_readers/${currentNick}`);
-        window.addEventListener('beforeunload', () => {
-            if (userRef) userRef.remove();
-        });
+        window.addEventListener('beforeunload', () => { if (userRef) userRef.remove(); });
         if (userRef) userRef.remove();
         updateActivity();
         if (callback && typeof callback === 'function') callback();
@@ -59,14 +50,12 @@
 
     function updateActivity() {
         if (!currentNick || !userRef) return;
-        const data = {
+        userRef.set({
             chapterId: currentChapterId !== null ? currentChapterId : 0,
-            chapterTitle: currentChapterTitle || 'Загрузка...',
+            chapterTitle: currentChapterTitle || '',
             timestamp: Date.now()
-        };
-        userRef.set(data);
+        });
         userRef.onDisconnect().remove();
-        // Логи убраны – больше не пишут в консоль
     }
 
     window.setReaderActivity = function(chapterId, chapterTitle) {
