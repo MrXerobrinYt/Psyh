@@ -3,7 +3,7 @@ let currentFilter = 'all';
 
 function escapeHtml(str) {
     if (!str) return '';
-    return String(str).replace(/[&<>]/g, function(m) {
+    return String(str).replace(/[&<>]/g, m => {
         if (m === '&') return '&amp;';
         if (m === '<') return '&lt;';
         if (m === '>') return '&gt;';
@@ -16,16 +16,15 @@ async function loadChapters() {
         if (!window.firebaseDb) {
             console.warn('Firebase not initialized, using localStorage fallback');
             const saved = localStorage.getItem('chapters_data');
-            if (saved) {
-                chaptersData = JSON.parse(saved);
-            } else {
+            if (saved) chaptersData = JSON.parse(saved);
+            else {
                 const res = await fetch('data/chapters.json');
                 chaptersData = await res.json();
             }
         } else {
             const snapshot = await window.firebaseDb.ref('chapters').once('value');
             let data = snapshot.val();
-            if (data && Array.isArray(data)) {
+            if (data && Array.isArray(data) && data.length > 0) {
                 chaptersData = data;
             } else {
                 const res = await fetch('data/chapters.json');
@@ -44,8 +43,8 @@ async function loadChapters() {
 
 function getDefaultChapters() {
     return [
-        { id:1, title:"Статья 1. Общие положения", category:"Общие положения", content:"<h1>Статья 1</h1><p>Текст...</p>" },
-        { id:2, title:"Статья 2. Права и обязанности", category:"Права и обязанности", content:"<h2>Статья 2</h2><p>Текст...</p>" }
+        { id:1, title:"Глава I. Общее положение", category:"Общие положения", content:"<h1>Глава I</h1><p>...</p>" },
+        { id:2, title:"Глава II. Пациент", category:"Пациент", content:"<h2>Глава II</h2><p>...</p>" }
     ];
 }
 
